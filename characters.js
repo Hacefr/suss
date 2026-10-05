@@ -14,7 +14,6 @@ function parseSparrowAtlas(baseTexture, xmlDoc) {
         const rawName = sub.getAttribute("name");
         if (!rawName) continue;
 
-        // Matches bop0001, bop01, bop0, bop 1, etc.
         const match = rawName.match(/^(.*?)[-_ ]*([0-9]+)$/);
         const animName = match ? match[1].trim() : rawName.trim();
 
@@ -83,25 +82,32 @@ class DynamicAtlasCharacter {
 
         this.charConfig = VirtualFS.charJsons[this.charName] || {};
         this.animMap = {};
+        this.animOffsets = {}; // Real FNF animation offsets
         this.animMatrices = {};
 
+        // Parse official character JSON animations & offsets
         if (this.charConfig.animations) {
             this.charConfig.animations.forEach(a => {
+                const animKey = a.name.toLowerCase();
                 const prefixLower = a.prefix.toLowerCase();
+                this.animOffsets[animKey] = a.offsets || [0, 0];
+
                 const matchedSym = Object.keys(this.symbols).find(s => s.toLowerCase().startsWith(prefixLower) || prefixLower.startsWith(s.toLowerCase()));
                 if (matchedSym) {
-                    this.animMap[a.name.toLowerCase()] = matchedSym;
-                    this.animMatrices[a.name.toLowerCase()] = this.rootMatrices[matchedSym] || new PIXI.Matrix();
+                    this.animMap[animKey] = matchedSym;
+                    this.animMatrices[animKey] = this.rootMatrices[matchedSym] || new PIXI.Matrix();
                 }
             });
         }
 
+        // Automatic symbol fallbacks if not explicitly in JSON
         for (const symName of Object.keys(this.symbols)) {
             const lower = symName.toLowerCase();
             const assign = (key) => {
                 if (!this.animMap[key]) {
                     this.animMap[key] = symName;
                     this.animMatrices[key] = this.rootMatrices[symName] || new PIXI.Matrix();
+                    if (!this.animOffsets[key]) this.animOffsets[key] = [0, 0];
                 }
             };
 
@@ -181,6 +187,11 @@ class DynamicAtlasCharacter {
         this.displayContainer.removeChildren();
         const self = this;
 
+        // Retrieve real official FNF offsets: (x - offsetX, y - offsetY)
+        const curOffset = this.animOffsets[this.currentAnim] || [0, 0];
+        const offX = -(curOffset[0] || 0) + (this.globalOffset[0] || 0);
+        const offY = -(curOffset[1] || 0) + (this.globalOffset[1] || 0);
+
         function renderSymbolInstance(symName, frameNum, parentMat, target) {
             const sym = self.symbols[symName];
             if (!sym || !sym.TL || !sym.TL.L) return;
@@ -218,6 +229,7 @@ class DynamicAtlasCharacter {
             }
         }
 
+        // Style A: Master Timeline Mode (Detective, Horsemate, Noob49, Pico)
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -237,13 +249,7 @@ class DynamicAtlasCharacter {
 
                 for (const el of activeFR.E) {
                     const baseMat = new PIXI.Matrix();
-
-                    if (this.charName.includes('pico')) baseMat.translate(116, -180);
-                    else if (this.charName.includes('noob')) baseMat.translate(-120, -320);
-                    else if (this.charName.includes('detective')) baseMat.translate(0, -220);
-                    else if (this.charName.includes('horse')) baseMat.translate(0, -260);
-
-                    baseMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
+                    baseMat.translate(offX, offY); // Pure data-driven offset
 
                     if (el.ASI) {
                         const tex = this.spritemap[el.ASI.N];
@@ -262,15 +268,11 @@ class DynamicAtlasCharacter {
             return;
         }
 
+        // Style B: Symbol Mode (Boyfriend, Maroon, Girlfriend)
         if (this.mode === 'symbol' && this.activeSymbolName) {
-            const animMat = this.animMatrices[this.currentAnim] || this.rootMatrices[this.activeSymbolName] || new PIXI.Matrix();
-            const rootMat = animMat.clone();
+            const rootMat = new PIXI.Matrix();
+            rootMat.translate(offX, offY); // Pure data-driven offset
 
-            if (this.isPlayer) rootMat.translate(-405, -280);
-            else if (this.isGF) rootMat.translate(-350, -320);
-            else rootMat.translate(-200, -320);
-
-            rootMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
             renderSymbolInstance(this.activeSymbolName, this.frame, rootMat, this.displayContainer);
         }
     }
