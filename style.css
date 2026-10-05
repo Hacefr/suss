@@ -1,0 +1,299 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+html, body {
+    background-color: #000000;
+    color: #ffffff;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* ==========================================================================
+   1. Drag-and-Drop Ingestion Overlay
+   ========================================================================== */
+#drop-overlay {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at center, #1b202e 0%, #08090c 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+}
+
+.drop-card {
+    background: rgba(20, 24, 35, 0.95);
+    border: 2px dashed #ff334b;
+    border-radius: 16px;
+    padding: 35px 50px;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(255, 51, 75, 0.25);
+    width: 620px;
+    max-width: 90vw;
+}
+
+.drop-card h1 {
+    font-size: 2.2rem;
+    letter-spacing: 2px;
+    color: #ff4757;
+    margin-bottom: 8px;
+    font-weight: 800;
+}
+
+.subtitle {
+    color: #a4b0be;
+    margin-bottom: 16px;
+    font-size: 0.95rem;
+}
+
+.subtitle code {
+    color: #2ed573;
+    background: rgba(46, 213, 115, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+#staged-files-list {
+    background: #0f121a;
+    border: 1px solid #2f3542;
+    border-radius: 8px;
+    padding: 14px;
+    margin: 15px 0;
+    max-height: 180px;
+    overflow-y: auto;
+    text-align: left;
+}
+
+.staged-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #191e2b;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+    color: #2ed573;
+    font-weight: 500;
+}
+
+.no-files-text {
+    color: #747d8c;
+    text-align: center;
+    font-size: 0.9rem;
+    padding: 10px 0;
+}
+
+#status-box {
+    background: #0f121a;
+    padding: 12px 24px;
+    border-radius: 8px;
+    color: #2ed573;
+    font-weight: bold;
+    display: inline-block;
+    border: 1px solid #2f3542;
+    margin-top: 10px;
+}
+
+.glow-btn {
+    background: #ff4757;
+    color: white;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(255, 71, 87, 0.4);
+    transition: all 0.2s ease;
+    margin-top: 15px;
+}
+
+.glow-btn:hover {
+    background: #ff6b81;
+    transform: scale(1.03);
+    box-shadow: 0 0 30px rgba(255, 71, 87, 0.6);
+}
+
+/* ==========================================================================
+   2. Freeplay Screen & Song Grid
+   ========================================================================== */
+#freeplay-screen {
+    width: 100vw;
+    height: 100vh;
+    padding: 30px 50px;
+    display: flex;
+    flex-direction: column;
+    background: radial-gradient(circle at top, #141724 0%, #060709 100%);
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #2f3542;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.title-group {
+    display: flex;
+    align-items: baseline;
+    gap: 15px;
+}
+
+header h2 {
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: #00d2d3;
+    font-weight: 800;
+}
+
+.version-tag {
+    font-size: 0.8rem;
+    color: #747d8c;
+    font-weight: bold;
+    background: #191e2b;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid #2f3542;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+#mod-counter {
+    color: #a4b0be;
+    font-weight: bold;
+    font-size: 0.95rem;
+}
+
+#song-grid {
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    padding-right: 10px;
+}
+
+.song-card {
+    background: #191e2b;
+    border: 1px solid #2f3542;
+    padding: 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 110px;
+}
+
+.song-card:hover {
+    border-color: #00d2d3;
+    transform: translateY(-3px);
+    box-shadow: 0 5px 20px rgba(0, 210, 211, 0.25);
+    background: #1e2536;
+}
+
+.song-card h3 {
+    font-size: 1.3rem;
+    color: #ffffff;
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+}
+
+.song-meta {
+    font-size: 0.85rem;
+    color: #747d8c;
+    display: flex;
+    justify-content: space-between;
+}
+
+.song-meta strong {
+    color: #c9d1d9;
+}
+
+/* ==========================================================================
+   3. Game Container, Pixi Viewport & Video Cutscene
+   ========================================================================== */
+#game-container {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000000;
+    z-index: 50;
+}
+
+/* Responsive 16:9 Letterboxed Canvas */
+#game-container canvas {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw;
+    max-height: 100vh;
+    aspect-ratio: 16 / 9;
+    object-fit: contain;
+    outline: none;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+}
+
+/* Hardware Video Cutscene Layer */
+#video-cutscene {
+    position: absolute;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: contain;
+    background: #000000;
+    z-index: 60;
+    display: none;
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+/* Custom Scrollbar for Freeplay Grid */
+#song-grid::-webkit-scrollbar,
+#staged-files-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+#song-grid::-webkit-scrollbar-track,
+#staged-files-list::-webkit-scrollbar-track {
+    background: #0f121a;
+    border-radius: 4px;
+}
+
+#song-grid::-webkit-scrollbar-thumb,
+#staged-files-list::-webkit-scrollbar-thumb {
+    background: #2f3542;
+    border-radius: 4px;
+}
+
+#song-grid::-webkit-scrollbar-thumb:hover,
+#staged-files-list::-webkit-scrollbar-thumb:hover {
+    background: #57606f;
+}
