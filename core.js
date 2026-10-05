@@ -9,18 +9,12 @@ const app = new PIXI.Application({
 const gameContainer = document.getElementById('game-container');
 gameContainer.appendChild(app.view);
 
-// Overlay for hardware-accelerated MP4 cutscenes
-const videoOverlay = document.createElement('video');
-videoOverlay.id = 'video-cutscene';
-videoOverlay.style.position = 'absolute';
-videoOverlay.style.inset = '0';
-videoOverlay.style.width = '100vw';
-videoOverlay.style.height = '100vh';
-videoOverlay.style.objectFit = 'contain';
-videoOverlay.style.zIndex = '60';
-videoOverlay.style.display = 'none';
-videoOverlay.playsInline = true;
-gameContainer.appendChild(videoOverlay);
+const videoOverlay = document.getElementById('video-cutscene') || document.createElement('video');
+if (!videoOverlay.parentElement) {
+    videoOverlay.id = 'video-cutscene';
+    videoOverlay.style.display = 'none';
+    gameContainer.appendChild(videoOverlay);
+}
 
 const VirtualFS = {
     charts: {},      
