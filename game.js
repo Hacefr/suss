@@ -42,7 +42,6 @@ class PlayStateScene {
         this.props = {};
         this.mistLayers = [];
 
-        // Mechanics flags from HScripts
         this.hesDying = false;
         this.isDark = false;
 
@@ -123,15 +122,26 @@ class PlayStateScene {
                     return;
                 }
 
-                if (stageProps[cleanName]) {
-                    const animTextures = Object.values(stageProps[cleanName])[0];
+                const propAnims = stageProps[cleanName];
+                let animTextures = null;
+
+                if (propAnims && typeof propAnims === 'object') {
+                    const keys = Object.keys(propAnims);
+                    if (keys.length > 0) {
+                        const targetKey = keys.find(k => k === p.startingAnimation || k === 'idle' || k.includes('bop')) || keys[0];
+                        animTextures = propAnims[targetKey] || Object.values(propAnims)[0];
+                    }
+                }
+
+                if (Array.isArray(animTextures) && animTextures.length > 0) {
                     const aSpr = new PIXI.AnimatedSprite(animTextures);
                     aSpr.position.set(p.position[0], p.position[1]);
                     aSpr.scale.set(p.scale || 1);
                     aSpr.zIndex = p.zIndex || 0;
                     aSpr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
-                    aSpr.loop = false;
+                    aSpr.loop = true;
                     aSpr.animationSpeed = 24 / 60;
+                    aSpr.play();
 
                     this.stageBack.addChild(aSpr);
                     const propName = p.name ? p.name.toLowerCase() : cleanName;
@@ -159,7 +169,6 @@ class PlayStateScene {
                 }
             });
 
-            // Security 2 Scrolling Mist Setup (security2.hxc)
             if (stageData['mistback'] && stageData['mistmid']) {
                 const mb = new PIXI.TilingSprite(stageData['mistback'], 4000, 720);
                 mb.position.set(-1000, -270);
@@ -414,7 +423,6 @@ class PlayStateScene {
         if (this.extraChars.grey && this.extraChars.grey.container.visible) this.extraChars.grey.update(deltaSec);
         if (this.extraChars.maroonParasite && this.extraChars.maroonParasite.container.visible) this.extraChars.maroonParasite.update(deltaSec);
 
-        // Security 2 Scrolling Mist update
         this.mistLayers.forEach(m => {
             m.sprite.tilePosition.x += m.speed * deltaSec;
         });
@@ -453,7 +461,6 @@ class PlayStateScene {
                 if (n.tailSprite) n.tailSprite.visible = false;
                 this.hitReceptor(n.dir, false);
 
-                // Medbay Poison Health Drain (medbay.hxc)
                 if (this.songItem.id.includes('lied') && this.health > 0.2) {
                     this.health = Math.max(0.2, this.health - 0.02);
                     this.updateHealthBar();
@@ -531,7 +538,6 @@ class PlayStateScene {
         const anims = ['left', 'down', 'up', 'right'];
         if (this.bf) this.bf.playAnim(anims[dir], true);
 
-        // Medbay Stabbing Trauma Check (medbay.hxc)
         if (this.hesDying && this.health > 0.2) {
             this.health = Math.max(0.2, this.health - 0.035);
             this.updateHealthBar();
@@ -591,7 +597,7 @@ class PlayStateScene {
     }
 }
 
-// Stage Step Directors (Reverse engineered from HScripts)
+// Stage Step Directors
 function onStepHit(step) {
     if (!playState) return;
     const currentSong = playState.songItem.id.toLowerCase();
@@ -621,7 +627,6 @@ function onStepHit(step) {
             playState.hudContainer.visible = true;
         }
 
-        // Rapid camera cuts
         if (step === 448 || step === 464 || step === 480) {
             playState.camTargetX = 500; playState.camTargetY = 450;
         }
@@ -629,10 +634,11 @@ function onStepHit(step) {
             playState.camTargetX = 850; playState.camTargetY = 450;
         }
 
-        // Pico gun shootout cutscene
         if (step === 805) {
             if (playState.bf) playState.bf.playAnim('lock in', true);
-            if (playState.props['player']) playState.props['player'].gotoAndPlay(0);
+            if (playState.props['player'] && typeof playState.props['player'].gotoAndPlay === 'function') {
+                playState.props['player'].gotoAndPlay(0);
+            }
         }
         if (step === 812) {
             if (playState.bf) playState.bf.playAnim('cock', true);
@@ -698,7 +704,6 @@ function onStepHit(step) {
             playState.dadCam = [850, 550];
         }
         if (step === 680) {
-            // Mid-song MP4 video cutscene trigger (beach.hxc)
             playVideoCutscene('tthreat');
         }
         if (step === 690) {
@@ -730,14 +735,20 @@ function onBeatHit(beat) {
     const currentSong = playState.songItem.id.toLowerCase();
 
     if (currentSong.includes('49')) {
-        if (beat % 2 === 0 && playState.props['shit']) playState.props['shit'].gotoAndPlay(0);
+        if (beat % 2 === 0 && playState.props['shit'] && typeof playState.props['shit'].gotoAndPlay === 'function') {
+            playState.props['shit'].gotoAndPlay(0);
+        }
         if (beat % 1 === 0) {
-            if (playState.props['tawny']) playState.props['tawny'].gotoAndPlay(0);
-            if (playState.props['graypet']) playState.props['graypet'].gotoAndPlay(0);
+            if (playState.props['tawny'] && typeof playState.props['tawny'].gotoAndPlay === 'function') {
+                playState.props['tawny'].gotoAndPlay(0);
+            }
+            if (playState.props['graypet'] && typeof playState.props['graypet'].gotoAndPlay === 'function') {
+                playState.props['graypet'].gotoAndPlay(0);
+            }
         }
     }
 
-    if (currentSong.includes('trot') && beat % 2 === 0 && playState.props['caught']) {
+    if (currentSong.includes('trot') && beat % 2 === 0 && playState.props['caught'] && typeof playState.props['caught'].gotoAndPlay === 'function') {
         playState.props['caught'].gotoAndPlay(0);
     }
 
@@ -792,21 +803,24 @@ async function loadAnimatedProp(stageFolder, propName) {
     let xmlEntry = null;
 
     for (const [path, entry] of Object.entries(VirtualFS.assets)) {
-        if (path.includes(`bg/${stageFolder}/`)) {
-            if (path.endsWith(`${propName}.png`)) pngEntry = entry;
-            if (path.endsWith(`${propName}.xml`)) xmlEntry = entry;
+        if (path.includes(`bg/${stageFolder}/`) || path.includes(`bg/`)) {
+            if (path.endsWith(`/${propName}.png`) || path.endsWith(`${propName}.png`)) pngEntry = entry;
+            if (path.endsWith(`/${propName}.xml`) || path.endsWith(`${propName}.xml`)) xmlEntry = entry;
         }
     }
 
     if (pngEntry && xmlEntry) {
         try {
             const pngBlob = await pngEntry.async('blob');
-            const xmlText = sanitizeJsonText(await xmlEntry.async('string'));
+            const xmlRaw = await xmlEntry.async('string');
+            const xmlClean = xmlRaw.replace(/^\uFEFF/, '').trim();
             const imgUrl = createTrackedBlobUrl(pngBlob);
-            const baseTexture = await PIXI.BaseTexture.from(imgUrl);
-            const xmlDoc = new DOMParser().parseFromString(xmlText, 'text/xml');
-            return parseSparrowAtlas(baseTexture, xmlDoc);
-        } catch(e) {}
+            const tex = await PIXI.Texture.fromURL(imgUrl);
+            const xmlDoc = new DOMParser().parseFromString(xmlClean, 'text/xml');
+            return parseSparrowAtlas(tex.baseTexture, xmlDoc);
+        } catch(e) {
+            console.warn("Failed loading animated prop:", propName, e);
+        }
     }
     return null;
 }
@@ -835,7 +849,6 @@ async function launchSong(item) {
     const songId = item.id.toLowerCase();
     const cleanId = songId.replace(/[^a-z0-9]/g, '');
 
-    // Play Song Intro Cutscene Video if it exists (e.g. 49.mp4, suspect.mp4, dontlied.mp4)
     if (songId.includes('49')) await playVideoCutscene('49');
     else if (songId.includes('suspect')) await playVideoCutscene('suspect');
     else if (songId.includes('lied')) await playVideoCutscene('dontlied');
