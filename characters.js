@@ -5,6 +5,7 @@ function extractMatrix(el) {
 }
 
 function parseSparrowAtlas(baseTexture, xmlDoc) {
+    if (!xmlDoc) return {};
     const subTextures = xmlDoc.getElementsByTagName("SubTexture");
     const anims = {};
 
@@ -13,8 +14,9 @@ function parseSparrowAtlas(baseTexture, xmlDoc) {
         const rawName = sub.getAttribute("name");
         if (!rawName) continue;
 
-        const match = rawName.match(/^(.*?)([0-9]{4})$/);
-        const animName = match ? match[1] : rawName;
+        // Matches bop0001, bop01, bop0, bop 1, etc.
+        const match = rawName.match(/^(.*?)[-_ ]*([0-9]+)$/);
+        const animName = match ? match[1].trim() : rawName.trim();
 
         const x = parseInt(sub.getAttribute("x") || 0, 10);
         const y = parseInt(sub.getAttribute("y") || 0, 10);
@@ -130,7 +132,6 @@ class DynamicAtlasCharacter {
     playAnim(animName, forced = false) {
         let clean = animName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-        // Pink Threat Alt-Anim Suffix Redirect (pinkthreat.hxc)
         if (this.charName.includes('pinkthreat') && this.idleSuffix === '-bruh') {
             if (clean.includes('left')) clean = 'lbruh';
             if (clean.includes('down')) clean = 'dbruh';
@@ -217,7 +218,6 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Style A: Master Timeline Mode
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -262,7 +262,6 @@ class DynamicAtlasCharacter {
             return;
         }
 
-        // Style B: Symbol Mode (Boyfriend, Maroon, etc.)
         if (this.mode === 'symbol' && this.activeSymbolName) {
             const animMat = this.animMatrices[this.currentAnim] || this.rootMatrices[this.activeSymbolName] || new PIXI.Matrix();
             const rootMat = animMat.clone();
@@ -362,7 +361,8 @@ async function loadCharacter(charName, isPlayer, isGF = false) {
 
             const pngBlob = await spritemapPngEntry.async('blob');
             const imgUrl = createTrackedBlobUrl(pngBlob);
-            const baseTexture = await PIXI.BaseTexture.from(imgUrl);
+            const tex = await PIXI.Texture.fromURL(imgUrl);
+            const baseTexture = tex.baseTexture;
 
             return new DynamicAtlasCharacter(baseTexture, animJson, spritemapJson, charName, isPlayer, isGF, [globalX, globalY]);
         } catch(err) {
