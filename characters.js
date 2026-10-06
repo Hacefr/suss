@@ -82,10 +82,10 @@ class DynamicAtlasCharacter {
 
         this.charConfig = VirtualFS.charJsons[this.charName] || {};
         this.animMap = {};
-        this.animOffsets = {}; // Real FNF animation offsets
+        this.animOffsets = {}; 
         this.animMatrices = {};
 
-        // Parse official character JSON animations & offsets
+        // 100% Data-Driven: Parse official character JSON animations & offsets
         if (this.charConfig.animations) {
             this.charConfig.animations.forEach(a => {
                 const animKey = a.name.toLowerCase();
@@ -100,7 +100,7 @@ class DynamicAtlasCharacter {
             });
         }
 
-        // Automatic symbol fallbacks if not explicitly in JSON
+        // Symbol auto-assignment fallback
         for (const symName of Object.keys(this.symbols)) {
             const lower = symName.toLowerCase();
             const assign = (key) => {
@@ -130,7 +130,8 @@ class DynamicAtlasCharacter {
         this.fps = 24;
 
         const charScale = this.charConfig.scale || 1.0;
-        this.container.scale.set(this.charConfig.flipX ? -charScale : charScale, charScale);
+        this.isFlipped = !!this.charConfig.flipX;
+        this.container.scale.set(this.isFlipped ? -charScale : charScale, charScale);
 
         this.playAnim(this.currentAnim, true);
     }
@@ -138,6 +139,7 @@ class DynamicAtlasCharacter {
     playAnim(animName, forced = false) {
         let clean = animName.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+        // Pink Threat Alt-Anim Suffix Redirect (pinkthreat.hxc)
         if (this.charName.includes('pinkthreat') && this.idleSuffix === '-bruh') {
             if (clean.includes('left')) clean = 'lbruh';
             if (clean.includes('down')) clean = 'dbruh';
@@ -187,9 +189,9 @@ class DynamicAtlasCharacter {
         this.displayContainer.removeChildren();
         const self = this;
 
-        // Retrieve real official FNF offsets: (x - offsetX, y - offsetY)
+        // NightmareVision Engine Exact Offset Formula: (pos - animOffset)
         const curOffset = this.animOffsets[this.currentAnim] || [0, 0];
-        const offX = -(curOffset[0] || 0) + (this.globalOffset[0] || 0);
+        const offX = (this.isFlipped ? (curOffset[0] || 0) : -(curOffset[0] || 0)) + (this.globalOffset[0] || 0);
         const offY = -(curOffset[1] || 0) + (this.globalOffset[1] || 0);
 
         function renderSymbolInstance(symName, frameNum, parentMat, target) {
@@ -229,7 +231,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Style A: Master Timeline Mode (Detective, Horsemate, Noob49, Pico)
+        // Style A: Master Timeline Driven (Pico, Detective, Horsemate, Noob49, Purple)
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -268,7 +270,7 @@ class DynamicAtlasCharacter {
             return;
         }
 
-        // Style B: Symbol Mode (Boyfriend, Maroon, Girlfriend)
+        // Style B: Symbol Driven (BF, Maroon, Girlfriend)
         if (this.mode === 'symbol' && this.activeSymbolName) {
             const rootMat = new PIXI.Matrix();
             rootMat.translate(offX, offY); // Pure data-driven offset
@@ -314,8 +316,10 @@ class DynamicAtlasCharacter {
     }
 }
 
+// Robust character loader (Dead Noob fix: matches by folder identity rather than slot identity)
 async function loadCharacter(charName, isPlayer, isGF = false) {
     const clean = charName.toLowerCase().trim();
+    const cleanId = clean.replace(/[^a-z0-9]/g, '');
     const charConfig = VirtualFS.charJsons[clean] || {};
     let globalX = 0;
     let globalY = 0;
@@ -332,25 +336,16 @@ async function loadCharacter(charName, isPlayer, isGF = false) {
     let spritemapJsonEntry = null;
     let spritemapPngEntry = null;
 
+    // Search VirtualFS by character folder name (e.g. /deadnoob49/, /bf weird/, /detective/)
     for (const [path, entry] of Object.entries(VirtualFS.assets)) {
-        let isMatch = false;
+        const pNorm = path.replace(/\\/g, '/').toLowerCase();
+        const folderPart = pNorm.split('/').slice(0, -1).join('/');
+        const folderNorm = folderPart.replace(/[^a-z0-9]/g, '');
 
-        if (isGF) {
-            isMatch = path.includes(`characters/gf/cosmicube/${clean}`) || path.includes('/gf/');
-        } else if (isPlayer) {
-            if (clean.includes('pico')) isMatch = path.includes('characters/pico/cosmicube/');
-            else isMatch = path.includes(`characters/bf/cosmicube/${clean}`) || path.includes('characters/bf/cosmicube/');
-        } else {
-            isMatch = path.includes(`characters/dlc/${clean}/`) || 
-                      path.includes(`characters/triple/${clean}/`) || 
-                      path.includes(`characters/triple/maroon/${clean}/`) ||
-                      path.includes(`characters/${clean}/`);
-        }
-
-        if (isMatch) {
-            if (path.endsWith('animation.json')) animJsonEntry = entry;
-            if (path.endsWith('spritemap1.json')) spritemapJsonEntry = entry;
-            if (path.endsWith('spritemap1.png')) spritemapPngEntry = entry;
+        if (folderNorm.includes(cleanId) || folderPart.endsWith(`/${clean}`) || folderPart.endsWith(`/${cleanId}`)) {
+            if (pNorm.endsWith('animation.json')) animJsonEntry = entry;
+            if (pNorm.endsWith('spritemap1.json')) spritemapJsonEntry = entry;
+            if (pNorm.endsWith('spritemap1.png')) spritemapPngEntry = entry;
         }
     }
 
