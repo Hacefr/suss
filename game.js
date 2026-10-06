@@ -48,7 +48,6 @@ class PlayStateScene {
         this.camZoom = (stageJson && stageJson.cameraZoom) ? stageJson.cameraZoom : 0.7;
         this.baseZoom = this.camZoom;
 
-        // Initialize stage cameras at true floor baseline
         this.initStageCameras(songItem.id.toLowerCase());
         this.setupStage(stageData, stageProps, stageJson);
         this.setupCharacters(stageJson);
@@ -61,34 +60,34 @@ class PlayStateScene {
     }
 
     initStageCameras(songId) {
-        // True floor baseline coordinates (stops camera from zooming into the ceiling)
+        // Raised camera focal points (hides the black void below the purple line)
         if (songId.includes('49') || songId.includes('suspect')) {
-            this.dadCam = [500, 720];
-            this.bfCam = [850, 720];
+            this.dadCam = [500, 600];
+            this.bfCam = [850, 600];
             this.camTargetX = 675;
-            this.camTargetY = 720;
+            this.camTargetY = 600;
         } else if (songId.includes('trot')) {
-            this.dadCam = [540, 680];
-            this.bfCam = [900, 680];
+            this.dadCam = [540, 520];
+            this.bfCam = [900, 520];
             this.camTargetX = 720;
-            this.camTargetY = 680;
+            this.camTargetY = 520;
         } else if (songId.includes('lied')) {
-            this.dadCam = [640, 720];
-            this.bfCam = [810, 720];
+            this.dadCam = [640, 580];
+            this.bfCam = [810, 580];
             this.camTargetX = 725;
-            this.camTargetY = 720;
+            this.camTargetY = 580;
         } else if (songId.includes('threat')) {
-            this.dadCam = [800, 800];
-            this.bfCam = [1100, 800];
+            this.dadCam = [800, 700];
+            this.bfCam = [1100, 700];
             this.camTargetX = 950;
-            this.camTargetY = 800;
+            this.camTargetY = 700;
             this.baseZoom = 0.5;
             this.camZoom = 0.5;
         } else {
-            this.dadCam = [600, 720];
-            this.bfCam = [850, 720];
+            this.dadCam = [600, 600];
+            this.bfCam = [850, 600];
             this.camTargetX = 725;
-            this.camTargetY = 720;
+            this.camTargetY = 600;
         }
 
         this.camFocusX = this.camTargetX;
@@ -141,9 +140,16 @@ class PlayStateScene {
                     aSpr.scale.set(p.scale || 1);
                     aSpr.zIndex = p.zIndex || 0;
                     aSpr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
-                    aSpr.loop = true;
+                    
+                    // Fixed: player prop stays frozen on frame 0 until Pico shoots at step 805
+                    const isPlayerShootProp = (cleanName === 'player');
+                    aSpr.loop = !isPlayerShootProp;
                     aSpr.animationSpeed = 24 / 60;
-                    aSpr.play();
+                    if (!isPlayerShootProp) {
+                        aSpr.play();
+                    } else {
+                        aSpr.gotoAndStop(0);
+                    }
 
                     this.stageBack.addChild(aSpr);
                     const propName = p.name ? p.name.toLowerCase() : cleanName;
@@ -153,7 +159,7 @@ class PlayStateScene {
                     const spr = new PIXI.Sprite(tex);
                     spr.position.set(p.position[0], p.position[1]);
                     
-                    // True 1:1 scale (Rogue 1.3x stretch removed to connect floor with table legs)
+                    // True 1:1 scaling
                     spr.scale.set(p.scale || 1);
 
                     spr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
@@ -384,8 +390,7 @@ class PlayStateScene {
                     this.camTargetY = this.bfCam[1];
                 } else if (val.char === -1 && val.x !== undefined && val.y !== undefined) {
                     this.camTargetX = val.x;
-                    // Add center offset if HaxeFlixel top-left scroll coordinate was sent
-                    this.camTargetY = (val.y < 600) ? val.y + 260 : val.y;
+                    this.camTargetY = (val.y < 600) ? val.y + 140 : val.y;
                 }
                 break;
 
@@ -606,7 +611,7 @@ function onStepHit(step) {
             if (playState.props['graypet']) playState.props['graypet'].alpha = 0.001;
             if (playState.props['tawny']) playState.props['tawny'].alpha = 0.001;
             if (playState.props['deadtawny']) playState.props['deadtawny'].alpha = 1;
-            playState.dadCam = [270, 720];
+            playState.dadCam = [270, 600];
         }
     }
 
@@ -626,15 +631,17 @@ function onStepHit(step) {
         }
 
         if (step === 448 || step === 464 || step === 480) {
-            playState.camTargetX = 500; playState.camTargetY = 720;
+            playState.camTargetX = 500; playState.camTargetY = 600;
         }
         if (step === 460 || step === 476 || step === 492) {
-            playState.camTargetX = 850; playState.camTargetY = 720;
+            playState.camTargetX = 850; playState.camTargetY = 600;
         }
 
+        // Fixed: Dead crewmate only plays death animation when Pico shoots at step 805
         if (step === 805) {
             if (playState.bf) playState.bf.playAnim('lock in', true);
             if (playState.props['player'] && typeof playState.props['player'].gotoAndPlay === 'function') {
+                playState.props['player'].loop = false;
                 playState.props['player'].gotoAndPlay(0);
             }
         }
@@ -699,14 +706,14 @@ function onStepHit(step) {
         if (step === 240) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = true;
             if (playState.dad) playState.dad.playAnim('wow', true);
-            playState.dadCam = [750, 800];
+            playState.dadCam = [750, 700];
         }
         if (step === 680) {
             playVideoCutscene('tthreat');
         }
         if (step === 690) {
             if (playState.extraChars.grey) playState.extraChars.grey.container.visible = true;
-            playState.dadCam = [450, 800];
+            playState.dadCam = [450, 700];
         }
         if (step === 1300) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.playAnim('shift', true);
@@ -717,7 +724,7 @@ function onStepHit(step) {
         if (step === 1320) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = false;
             if (playState.extraChars.maroonParasite) playState.extraChars.maroonParasite.container.visible = true;
-            playState.dadCam = [700, 800];
+            playState.dadCam = [700, 700];
         }
         if (step === 1848) {
             if (playState.dad) playState.dad.playAnim('bruh', true);
@@ -847,7 +854,6 @@ async function launchSong(item) {
     const songId = item.id.toLowerCase();
     const cleanId = songId.replace(/[^a-z0-9]/g, '');
 
-    // Play Song Intro Cutscene Video if it exists
     if (songId.includes('49')) await playVideoCutscene('49');
     else if (songId.includes('suspect')) await playVideoCutscene('suspect');
     else if (songId.includes('lied')) await playVideoCutscene('dontlied');
@@ -878,7 +884,11 @@ async function launchSong(item) {
             Conductor.activeSources.push(source);
         }
 
-        const dadChar = await loadCharacter(item.player2, false, false);
+        // Clean character name resolution: prevents loading stabbed variant
+        let opponentName = item.player2;
+        if (cleanId === '49' || cleanId.includes('49')) opponentName = 'noob49';
+
+        const dadChar = await loadCharacter(opponentName, false, false);
         const bfChar = await loadCharacter(item.player1, true, false);
         
         let gfName = 'gfweird';
