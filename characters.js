@@ -251,7 +251,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Timeline Mode: Character Ground Baseline Alignments
+        // Timeline Mode
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -272,13 +272,13 @@ class DynamicAtlasCharacter {
                 for (const el of activeFR.E) {
                     const baseMat = new PIXI.Matrix();
 
-                    // Floor line grounding
+                    // Floor line alignment
                     if (this.charName === 'noob49') {
-                        baseMat.translate(0, -510);   // Aligns Noob49 with BF on the floor without occluding Mini Grey
+                        baseMat.translate(60, -700);   // Raised to Boyfriend's Y-level, beside Mini Grey
                     } else if (this.charName.includes('detective')) {
-                        baseMat.translate(0, -380);   // Grounded on green tile line
+                        baseMat.translate(0, -380);   // Standing on tile floor
                     } else if (this.charName.includes('horse')) {
-                        baseMat.translate(70, -420);  // Shifted right directly onto the brown dirt ledge
+                        baseMat.translate(-150, -420); // Moved left beside speakers on the dirt ledge
                     }
 
                     baseMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
@@ -308,7 +308,7 @@ class DynamicAtlasCharacter {
             if (this.charName.includes('pico')) {
                 rootMat.translate(116, -180);
             } else if (this.charName.includes('purple')) {
-                rootMat.translate(-200, -410); // Aligns Purple squarely on the tile floor seam
+                rootMat.translate(-200, -410); // Aligned on the floor tile seam
             } else if (this.isPlayer) {
                 rootMat.translate(-405, -280);
             } else if (this.isGF) {
@@ -387,7 +387,7 @@ async function loadCharacter(charName, isPlayer, isGF = false) {
 
         let matches = false;
         if (clean === 'noob49') {
-            matches = (folderName === 'noob49'); // Loads clean Noob49, never stabbed
+            matches = (folderName === 'noob49');
         } else if (clean === 'deadnoob49') {
             matches = (folderName === 'deadnoob49');
         } else {
