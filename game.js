@@ -45,9 +45,11 @@ class PlayStateScene {
         this.hesDying = false;
         this.isDark = false;
 
-        this.camZoom = (stageJson && stageJson.cameraZoom) ? stageJson.cameraZoom : 0.7;
+        this.stageDefaultZoom = (stageJson && stageJson.cameraZoom) ? stageJson.cameraZoom : 0.7;
+        this.camZoom = this.stageDefaultZoom;
         this.baseZoom = this.camZoom;
 
+        // Stage camera initialization (raised up ~50px to eliminate the bottom off-color border)
         this.initStageCameras(songItem.id.toLowerCase());
         this.setupStage(stageData, stageProps, stageJson);
         this.setupCharacters(stageJson);
@@ -60,34 +62,34 @@ class PlayStateScene {
     }
 
     initStageCameras(songId) {
-        // Raised camera focal points (hides the black void below the purple line)
         if (songId.includes('49') || songId.includes('suspect')) {
-            this.dadCam = [500, 600];
-            this.bfCam = [850, 600];
+            this.dadCam = [500, 550];
+            this.bfCam = [850, 550];
             this.camTargetX = 675;
-            this.camTargetY = 600;
+            this.camTargetY = 550;
         } else if (songId.includes('trot')) {
-            this.dadCam = [540, 520];
-            this.bfCam = [900, 520];
+            this.dadCam = [540, 470];
+            this.bfCam = [900, 470];
             this.camTargetX = 720;
-            this.camTargetY = 520;
+            this.camTargetY = 470;
         } else if (songId.includes('lied')) {
-            this.dadCam = [640, 580];
-            this.bfCam = [810, 580];
+            this.dadCam = [640, 530];
+            this.bfCam = [810, 530];
             this.camTargetX = 725;
-            this.camTargetY = 580;
+            this.camTargetY = 530;
         } else if (songId.includes('threat')) {
-            this.dadCam = [800, 700];
-            this.bfCam = [1100, 700];
+            this.dadCam = [800, 650];
+            this.bfCam = [1100, 650];
             this.camTargetX = 950;
-            this.camTargetY = 700;
+            this.camTargetY = 650;
+            this.stageDefaultZoom = 0.5;
             this.baseZoom = 0.5;
             this.camZoom = 0.5;
         } else {
-            this.dadCam = [600, 600];
-            this.bfCam = [850, 600];
+            this.dadCam = [600, 550];
+            this.bfCam = [850, 550];
             this.camTargetX = 725;
-            this.camTargetY = 600;
+            this.camTargetY = 550;
         }
 
         this.camFocusX = this.camTargetX;
@@ -141,7 +143,7 @@ class PlayStateScene {
                     aSpr.zIndex = p.zIndex || 0;
                     aSpr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
                     
-                    // Fixed: player prop stays frozen on frame 0 until Pico shoots at step 805
+                    // Fixed: 'player' dead body in Suspect stays frozen on frame 0 until Pico shoots
                     const isPlayerShootProp = (cleanName === 'player');
                     aSpr.loop = !isPlayerShootProp;
                     aSpr.animationSpeed = 24 / 60;
@@ -159,7 +161,7 @@ class PlayStateScene {
                     const spr = new PIXI.Sprite(tex);
                     spr.position.set(p.position[0], p.position[1]);
                     
-                    // True 1:1 scaling
+                    // True 1:1 scale (no rogue 1.3x stretch)
                     spr.scale.set(p.scale || 1);
 
                     spr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
@@ -390,13 +392,17 @@ class PlayStateScene {
                     this.camTargetY = this.bfCam[1];
                 } else if (val.char === -1 && val.x !== undefined && val.y !== undefined) {
                     this.camTargetX = val.x;
-                    this.camTargetY = (val.y < 600) ? val.y + 140 : val.y;
+                    this.camTargetY = (val.y < 600) ? val.y + 40 : val.y;
                 }
                 break;
 
+            // Fixed: Camera zoom applies proportional to stage zoom (prevents 1.65x extreme close-ups)
             case 'ClassicCameraZoom':
             case 'ZoomCamera':
-                if (val.zoom !== undefined) this.baseZoom = val.zoom;
+                if (val.zoom !== undefined) {
+                    const isDirect = (val.mode === 'direct');
+                    this.baseZoom = isDirect ? val.zoom : (this.stageDefaultZoom * val.zoom);
+                }
                 break;
 
             case 'ChangeSuffix':
@@ -611,7 +617,7 @@ function onStepHit(step) {
             if (playState.props['graypet']) playState.props['graypet'].alpha = 0.001;
             if (playState.props['tawny']) playState.props['tawny'].alpha = 0.001;
             if (playState.props['deadtawny']) playState.props['deadtawny'].alpha = 1;
-            playState.dadCam = [270, 600];
+            playState.dadCam = [270, 550];
         }
     }
 
@@ -631,13 +637,12 @@ function onStepHit(step) {
         }
 
         if (step === 448 || step === 464 || step === 480) {
-            playState.camTargetX = 500; playState.camTargetY = 600;
+            playState.camTargetX = 500; playState.camTargetY = 550;
         }
         if (step === 460 || step === 476 || step === 492) {
-            playState.camTargetX = 850; playState.camTargetY = 600;
+            playState.camTargetX = 850; playState.camTargetY = 550;
         }
 
-        // Fixed: Dead crewmate only plays death animation when Pico shoots at step 805
         if (step === 805) {
             if (playState.bf) playState.bf.playAnim('lock in', true);
             if (playState.props['player'] && typeof playState.props['player'].gotoAndPlay === 'function') {
@@ -706,14 +711,14 @@ function onStepHit(step) {
         if (step === 240) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = true;
             if (playState.dad) playState.dad.playAnim('wow', true);
-            playState.dadCam = [750, 700];
+            playState.dadCam = [750, 650];
         }
         if (step === 680) {
             playVideoCutscene('tthreat');
         }
         if (step === 690) {
             if (playState.extraChars.grey) playState.extraChars.grey.container.visible = true;
-            playState.dadCam = [450, 700];
+            playState.dadCam = [450, 650];
         }
         if (step === 1300) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.playAnim('shift', true);
@@ -724,7 +729,7 @@ function onStepHit(step) {
         if (step === 1320) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = false;
             if (playState.extraChars.maroonParasite) playState.extraChars.maroonParasite.container.visible = true;
-            playState.dadCam = [700, 700];
+            playState.dadCam = [700, 650];
         }
         if (step === 1848) {
             if (playState.dad) playState.dad.playAnim('bruh', true);
@@ -854,6 +859,7 @@ async function launchSong(item) {
     const songId = item.id.toLowerCase();
     const cleanId = songId.replace(/[^a-z0-9]/g, '');
 
+    // Intro Video Cutscenes
     if (songId.includes('49')) await playVideoCutscene('49');
     else if (songId.includes('suspect')) await playVideoCutscene('suspect');
     else if (songId.includes('lied')) await playVideoCutscene('dontlied');
@@ -884,7 +890,7 @@ async function launchSong(item) {
             Conductor.activeSources.push(source);
         }
 
-        // Clean character name resolution: prevents loading stabbed variant
+        // Resolves exact character: always loads clean noob49 for 49
         let opponentName = item.player2;
         if (cleanId === '49' || cleanId.includes('49')) opponentName = 'noob49';
 
