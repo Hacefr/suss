@@ -81,13 +81,70 @@ class DynamicAtlasCharacter {
         }
 
         this.charConfig = VirtualFS.charJsons[this.charName] || {};
+        this.animMap = {};
         this.animOffsets = {}; 
 
+        // 1. Build animation map from char JSON
         if (this.charConfig.animations) {
             this.charConfig.animations.forEach(a => {
-                this.animOffsets[a.name.toLowerCase()] = a.offsets || [0, 0];
+                const animKey = a.name.toLowerCase();
+                const prefixLower = a.prefix.toLowerCase();
+                this.animOffsets[animKey] = a.offsets || [0, 0];
+
+                const matchedSym = Object.keys(this.symbols).find(s => {
+                    const sLow = s.toLowerCase();
+                    return sLow.includes(prefixLower) || prefixLower.includes(sLow.split('/').pop());
+                });
+
+                if (matchedSym) {
+                    this.animMap[animKey] = matchedSym;
+                }
             });
         }
+
+        // 2. Fallback symbols for directions
+        for (const symName of Object.keys(this.symbols)) {
+            const lower = symName.toLowerCase();
+            const assign = (key) => {
+                if (!this.animMap[key]) {
+                    this.animMap[key] = symName;
+                    if (!this.animOffsets[key]) this.animOffsets[key] = [0, 0];
+                }
+            };
+
+            if (this.isGF) {
+                if (lower.includes('idle1') || lower.includes('idleleft')) assign('danceleft');
+                if (lower.includes('idle2') || lower.includes('idleright')) assign('danceright');
+            } else {
+                if (lower.includes('idle')) assign('idle');
+                if (lower.includes('left') && !lower.includes('miss')) { assign('left'); assign('singleft'); }
+                if (lower.includes('down') && !lower.includes('miss')) { assign('down'); assign('singdown'); }
+                if (lower.includes('up') && !lower.includes('miss')) { assign('up'); assign('singup'); }
+                if (lower.includes('right') && !lower.includes('miss')) { assign('right'); assign('singright'); }
+
+                if (lower.includes('miss')) {
+                    if (lower.includes('left')) assign('singleftmiss');
+                    if (lower.includes('down')) assign('singdownmiss');
+                    if (lower.includes('up')) assign('singupmiss');
+                    if (lower.includes('right')) assign('singrightmiss');
+                }
+                if (lower.includes('lock in')) assign('lock in');
+                if (lower.includes('cock')) assign('cock');
+                if (lower.includes('blast')) assign('blast');
+            }
+        }
+
+        // 3. Anchor Matrix Detection (Locks Idle position so notes NEVER jump)
+        this.idleRootMatrix = new PIXI.Matrix();
+        for (const [sym, mat] of Object.entries(this.rootMatrices)) {
+            if (sym.toLowerCase().includes('idle')) {
+                this.idleRootMatrix = mat.clone();
+                break;
+            }
+        }
+
+        // Style selector: Detective, Horsemate, and Noob49 use Master Timeline; BF, Pico, GF use Symbol
+        this.isTimelineDriven = this.charName.includes('detective') || this.charName.includes('horse') || this.charName.includes('noob49');
 
         this.currentAnim = this.isGF ? 'danceright' : 'idle';
         this.frame = 0;
@@ -96,8 +153,7 @@ class DynamicAtlasCharacter {
         this.fps = 24;
 
         const charScale = this.charConfig.scale || 1.0;
-        this.isFlipped = !!this.charConfig.flipX;
-        this.container.scale.set(this.isFlipped ? -charScale : charScale, charScale);
+        this.container.scale.set(this.charConfig.flipX ? -charScale : charScale, charScale);
 
         this.playAnim(this.currentAnim, true);
     }
@@ -105,7 +161,6 @@ class DynamicAtlasCharacter {
     playAnim(animName, forced = false) {
         let clean = animName.toLowerCase().trim();
 
-        // 1. Pink Threat Alt-Anim Suffix Redirect (pinkthreat.hxc)
         if (this.charName.includes('pinkthreat') && this.idleSuffix === '-bruh') {
             if (clean.includes('left')) clean = 'lbruh';
             if (clean.includes('down')) clean = 'dbruh';
@@ -113,71 +168,43 @@ class DynamicAtlasCharacter {
             if (clean.includes('right')) clean = 'rbruh';
         }
 
-        // 2. Lookup the official prefix from character JSON
-        let targetPrefix = null;
-        let animConfig = null;
-        if (this.charConfig && this.charConfig.animations) {
-            animConfig = this.charConfig.animations.find(a => {
-                const aName = a.name.toLowerCase().trim();
-                return aName === clean || clean.startsWith(aName) || aName.startsWith(clean);
+        // A. Timeline Style (Detective, Horsemate, Noob49)
+        if (this.isTimelineDriven) {
+            let targetTimelineKey = Object.keys(this.timelineAnims).find(k => {
+                const kc = k.replace(/[^a-z0-9]/g, '');
+                const cc = clean.replace(/[^a-z0-9]/g, '');
+                return kc === cc || kc.startsWith(cc) || cc.startsWith(kc);
             });
-            if (animConfig && animConfig.prefix) {
-                targetPrefix = animConfig.prefix.toLowerCase().trim();
+
+            if (!targetTimelineKey && clean.includes('idle')) {
+                targetTimelineKey = Object.keys(this.timelineAnims).find(k => k.includes('idle'));
+            }
+
+            if (targetTimelineKey) {
+                this.mode = 'timeline';
+                this.currentAnim = targetTimelineKey;
+                this.activeAnimData = this.timelineAnims[targetTimelineKey];
+                this.frame = 0;
+                this.frameTimer = 0;
+                if (!clean.includes('idle')) this.holdTimer = 0.35;
+                this.renderCurrentFrame();
+                return;
             }
         }
 
-        const candidates = [targetPrefix, clean, animName].filter(Boolean);
+        // B. Symbol Style (BF, Pico, GF, Maroon)
+        let targetKey = Object.keys(this.animMap).find(k => {
+            const kc = k.replace(/[^a-z0-9]/g, '');
+            const cc = clean.replace(/[^a-z0-9]/g, '');
+            return kc === cc || kc.startsWith(cc) || cc.startsWith(kc);
+        });
 
-        // 3. Match against Master Timeline Labels (Pico, BF, Detective, Horsemate, Noob49)
-        let matchedTimelineKey = null;
-        for (const term of candidates) {
-            const tClean = term.replace(/[^a-z0-9]/g, '');
-            matchedTimelineKey = Object.keys(this.timelineAnims).find(k => {
-                const kClean = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-                return kClean === tClean || kClean.startsWith(tClean) || tClean.startsWith(kClean);
-            });
-            if (matchedTimelineKey) break;
-        }
+        if (!targetKey && clean.includes('idle')) targetKey = this.isGF ? 'danceright' : 'idle';
 
-        // GF / Idle fallbacks
-        if (!matchedTimelineKey && clean.includes('idle')) {
-            matchedTimelineKey = Object.keys(this.timelineAnims).find(k => k.toLowerCase().includes('idle'));
-        }
-        if (!matchedTimelineKey && clean.includes('dance')) {
-            const isLeft = clean.includes('left');
-            matchedTimelineKey = Object.keys(this.timelineAnims).find(k => {
-                const kl = k.toLowerCase();
-                return isLeft ? (kl.includes('left') || kl.includes('1')) : (kl.includes('right') || kl.includes('2'));
-            });
-        }
-
-        if (matchedTimelineKey) {
-            this.mode = 'timeline';
-            this.currentAnim = animConfig ? animConfig.name.toLowerCase() : clean;
-            this.activeTimelineKey = matchedTimelineKey;
-            this.activeAnimData = this.timelineAnims[matchedTimelineKey];
-            this.frame = 0;
-            this.frameTimer = 0;
-            if (!clean.includes('idle') && !clean.includes('dance')) this.holdTimer = 0.35;
-            this.renderCurrentFrame();
-            return;
-        }
-
-        // 4. Fallback to Symbol Mode if not on timeline (e.g. Maroon Threat)
-        let matchedSymKey = null;
-        for (const term of candidates) {
-            const tClean = term.replace(/[^a-z0-9]/g, '');
-            matchedSymKey = Object.keys(this.symbols).find(k => {
-                const kClean = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-                return kClean === tClean || kClean.startsWith(tClean) || tClean.startsWith(kClean);
-            });
-            if (matchedSymKey) break;
-        }
-
-        if (matchedSymKey) {
+        if (targetKey && this.animMap[targetKey]) {
             this.mode = 'symbol';
-            this.currentAnim = animConfig ? animConfig.name.toLowerCase() : clean;
-            this.activeSymbolName = matchedSymKey;
+            this.currentAnim = targetKey;
+            this.activeSymbolName = this.animMap[targetKey];
             this.frame = 0;
             this.frameTimer = 0;
             if (!clean.includes('idle') && !clean.includes('dance')) this.holdTimer = 0.35;
@@ -189,12 +216,7 @@ class DynamicAtlasCharacter {
         this.displayContainer.removeChildren();
         const self = this;
 
-        // Data-driven NightmareVision offsets: (stagePos - animOffset)
-        const curOffset = this.animOffsets[this.currentAnim] || [0, 0];
-        const offX = (this.isFlipped ? (curOffset[0] || 0) : -(curOffset[0] || 0)) + (this.globalOffset[0] || 0);
-        const offY = -(curOffset[1] || 0) + (this.globalOffset[1] || 0);
-
-        // Correct child -> parent matrix multiplication: child.clone().append(parent)
+        // Correct limb assembly: Parent Matrix -> Local Matrix
         function renderSymbolInstance(symName, frameNum, parentMat, target) {
             const sym = self.symbols[symName];
             if (!sym || !sym.TL || !sym.TL.L) return;
@@ -220,21 +242,21 @@ class DynamicAtlasCharacter {
                         if (tex) {
                             const spr = new PIXI.Sprite(tex);
                             const localMat = extractMatrix(el.ASI);
-                            const finalMat = localMat.clone().append(parentMat);
+                            const finalMat = parentMat.clone().append(localMat);
                             spr.transform.setFromMatrix(finalMat);
                             target.addChild(spr);
                         }
                     } else if (el.SI) {
                         let subFrame = (el.SI.LP === "SF") ? (el.SI.FF || 0) : (frameNum - activeFR.I + (el.SI.FF || 0));
                         const localMat = extractMatrix(el.SI);
-                        const finalMat = localMat.clone().append(parentMat);
+                        const finalMat = parentMat.clone().append(localMat);
                         renderSymbolInstance(el.SI.SN, subFrame, finalMat, target);
                     }
                 }
             }
         }
 
-        // Style A: Master Timeline Mode (No Teleportation!)
+        // Timeline Mode
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -254,20 +276,19 @@ class DynamicAtlasCharacter {
 
                 for (const el of activeFR.E) {
                     const baseMat = new PIXI.Matrix();
-                    baseMat.translate(offX, offY);
+                    baseMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
 
                     if (el.ASI) {
                         const tex = this.spritemap[el.ASI.N];
                         if (tex) {
                             const spr = new PIXI.Sprite(tex);
-                            const localMat = extractMatrix(el.ASI);
-                            spr.transform.setFromMatrix(localMat.clone().append(baseMat));
+                            spr.transform.setFromMatrix(baseMat.clone().append(extractMatrix(el.ASI)));
                             this.displayContainer.addChild(spr);
                         }
                     } else if (el.SI) {
                         let subFrame = (el.SI.LP === "SF") ? (el.SI.FF || 0) : (masterFrame - activeFR.I + (el.SI.FF || 0));
                         const localMat = extractMatrix(el.SI);
-                        const finalMat = localMat.clone().append(baseMat);
+                        const finalMat = baseMat.clone().append(localMat);
                         renderSymbolInstance(el.SI.SN, subFrame, finalMat, this.displayContainer);
                     }
                 }
@@ -275,10 +296,13 @@ class DynamicAtlasCharacter {
             return;
         }
 
-        // Style B: Symbol Mode (Maroon)
+        // Symbol Mode: Locked to Idle Anchor (Zero Jumping on Notes)
         if (this.mode === 'symbol' && this.activeSymbolName) {
-            const rootMat = new PIXI.Matrix();
-            rootMat.translate(offX, offY);
+            const rootMat = (this.rootMatrices[this.activeSymbolName] || this.idleRootMatrix).clone();
+            
+            // Apply official offset deltas
+            const offsets = this.animOffsets[this.currentAnim] || [0, 0];
+            rootMat.translate(-offsets[0] + (this.globalOffset[0] || 0), -offsets[1] + (this.globalOffset[1] || 0));
 
             renderSymbolInstance(this.activeSymbolName, this.frame, rootMat, this.displayContainer);
         }
@@ -299,7 +323,7 @@ class DynamicAtlasCharacter {
 
             if (this.mode === 'timeline' && this.activeAnimData) {
                 if (this.frame >= this.activeAnimData.duration) {
-                    this.frame = (this.currentAnim.includes('idle') || this.currentAnim.includes('dance')) ? 0 : this.activeAnimData.duration - 1;
+                    this.frame = (this.currentAnim.includes('idle')) ? 0 : this.activeAnimData.duration - 1;
                 }
             } else if (this.mode === 'symbol' && this.activeSymbolName) {
                 const sym = this.symbols[this.activeSymbolName];
@@ -321,7 +345,6 @@ class DynamicAtlasCharacter {
     }
 }
 
-// Character loader (Dead Noob fix: matches by folder identity rather than slot identity)
 async function loadCharacter(charName, isPlayer, isGF = false) {
     const clean = charName.toLowerCase().trim();
     const cleanId = clean.replace(/[^a-z0-9]/g, '');
