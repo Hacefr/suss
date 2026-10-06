@@ -49,7 +49,7 @@ class PlayStateScene {
         this.camZoom = this.stageDefaultZoom;
         this.baseZoom = this.camZoom;
 
-        // Camera initialized ~70px higher to cut off the area under the purple lines
+        // Camera initialized ~30px higher to cut off the area under the purple lines
         this.initStageCameras(songItem.id.toLowerCase());
         this.setupStage(stageData, stageProps, stageJson);
         this.setupCharacters(stageJson);
@@ -63,17 +63,17 @@ class PlayStateScene {
 
     initStageCameras(songId) {
         if (songId.includes('49') || songId.includes('suspect')) {
-            this.dadCam = [500, 480];
-            this.bfCam = [850, 480];
+            this.dadCam = [500, 450];
+            this.bfCam = [850, 450];
             this.camTargetX = 675;
-            this.camTargetY = 480;
+            this.camTargetY = 450;
         } else if (songId.includes('trot')) {
-            this.dadCam = [540, 390];
-            this.bfCam = [900, 390];
+            this.dadCam = [540, 360];
+            this.bfCam = [900, 360];
             this.camTargetX = 720;
-            this.camTargetY = 390;
+            this.camTargetY = 360;
         } else if (songId.includes('lied')) {
-            this.dadCam = [640, 460];
+            this.dadCam = [640, 460]; // Don't Lied kept exactly as requested
             this.bfCam = [810, 460];
             this.camTargetX = 725;
             this.camTargetY = 460;
@@ -86,10 +86,10 @@ class PlayStateScene {
             this.baseZoom = 0.5;
             this.camZoom = 0.5;
         } else {
-            this.dadCam = [600, 480];
-            this.bfCam = [850, 480];
+            this.dadCam = [600, 450];
+            this.bfCam = [850, 450];
             this.camTargetX = 725;
-            this.camTargetY = 480;
+            this.camTargetY = 450;
         }
 
         this.camFocusX = this.camTargetX;
@@ -159,7 +159,7 @@ class PlayStateScene {
                 } else if (tex) {
                     const spr = new PIXI.Sprite(tex);
                     spr.position.set(p.position[0], p.position[1]);
-                    spr.scale.set(p.scale || 1); // True 1:1 scale
+                    spr.scale.set(p.scale || 1);
 
                     spr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
                     if (p.blend === 'subtract') spr.blendMode = PIXI.BLEND_MODES.SUBTRACT;
@@ -393,7 +393,6 @@ class PlayStateScene {
                 }
                 break;
 
-            // Proportional zoom from ClassicCameraZoom.hxc
             case 'ClassicCameraZoom':
             case 'ZoomCamera':
                 if (val.zoom !== undefined) {
@@ -614,7 +613,7 @@ function onStepHit(step) {
             if (playState.props['graypet']) playState.props['graypet'].alpha = 0.001;
             if (playState.props['tawny']) playState.props['tawny'].alpha = 0.001;
             if (playState.props['deadtawny']) playState.props['deadtawny'].alpha = 1;
-            playState.dadCam = [270, 480];
+            playState.dadCam = [270, 450];
         }
     }
 
@@ -634,10 +633,10 @@ function onStepHit(step) {
         }
 
         if (step === 448 || step === 464 || step === 480) {
-            playState.camTargetX = 500; playState.camTargetY = 480;
+            playState.camTargetX = 500; playState.camTargetY = 450;
         }
         if (step === 460 || step === 476 || step === 492) {
-            playState.camTargetX = 850; playState.camTargetY = 480;
+            playState.camTargetX = 850; playState.camTargetY = 450;
         }
 
         if (step === 805) {
