@@ -251,7 +251,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Timeline Mode (Green Line Ground Alignment)
+        // Timeline Mode: Character Ground Baseline Alignments
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -272,13 +272,13 @@ class DynamicAtlasCharacter {
                 for (const el of activeFR.E) {
                     const baseMat = new PIXI.Matrix();
 
-                    // Green Line ground alignments
+                    // Floor line grounding
                     if (this.charName === 'noob49') {
-                        baseMat.translate(-120, -560); // Lifts Noob49 up to desk height
+                        baseMat.translate(0, -510);   // Aligns Noob49 with BF on the floor without occluding Mini Grey
                     } else if (this.charName.includes('detective')) {
-                        baseMat.translate(0, -380);    // Lifts Detective up to tile floor level
+                        baseMat.translate(0, -380);   // Grounded on green tile line
                     } else if (this.charName.includes('horse')) {
-                        baseMat.translate(0, -480);    // Lifts Horsemate directly onto the dirt ledge
+                        baseMat.translate(70, -420);  // Shifted right directly onto the brown dirt ledge
                     }
 
                     baseMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
@@ -308,7 +308,7 @@ class DynamicAtlasCharacter {
             if (this.charName.includes('pico')) {
                 rootMat.translate(116, -180);
             } else if (this.charName.includes('purple')) {
-                rootMat.translate(-200, -460); // Lifts Purple up to green line
+                rootMat.translate(-200, -410); // Aligns Purple squarely on the tile floor seam
             } else if (this.isPlayer) {
                 rootMat.translate(-405, -280);
             } else if (this.isGF) {
@@ -380,7 +380,6 @@ async function loadCharacter(charName, isPlayer, isGF = false) {
     let spritemapJsonEntry = null;
     let spritemapPngEntry = null;
 
-    // Disambiguate noob49 so it never loads noob49stabbed or noob49dark
     for (const [path, entry] of Object.entries(VirtualFS.assets)) {
         const pNorm = path.replace(/\\/g, '/').toLowerCase();
         const parts = pNorm.split('/');
@@ -388,7 +387,7 @@ async function loadCharacter(charName, isPlayer, isGF = false) {
 
         let matches = false;
         if (clean === 'noob49') {
-            matches = (folderName === 'noob49'); // Exact folder match prevents stabbed skin
+            matches = (folderName === 'noob49'); // Loads clean Noob49, never stabbed
         } else if (clean === 'deadnoob49') {
             matches = (folderName === 'deadnoob49');
         } else {
