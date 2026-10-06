@@ -272,13 +272,13 @@ class DynamicAtlasCharacter {
                 for (const el of activeFR.E) {
                     const baseMat = new PIXI.Matrix();
 
-                    // Floor line alignment
+                    // Character stage placement
                     if (this.charName === 'noob49') {
-                        baseMat.translate(60, -700);   // Raised to Boyfriend's Y-level, beside Mini Grey
+                        baseMat.translate(280, -700);  // Shifted right into the green box beside Mini Grey
                     } else if (this.charName.includes('detective')) {
                         baseMat.translate(0, -380);   // Standing on tile floor
                     } else if (this.charName.includes('horse')) {
-                        baseMat.translate(-150, -420); // Moved left beside speakers on the dirt ledge
+                        baseMat.translate(-300, -420); // Moved further left onto the dirt ledge
                     }
 
                     baseMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
@@ -308,7 +308,7 @@ class DynamicAtlasCharacter {
             if (this.charName.includes('pico')) {
                 rootMat.translate(116, -180);
             } else if (this.charName.includes('purple')) {
-                rootMat.translate(-200, -410); // Aligned on the floor tile seam
+                rootMat.translate(-200, -410); // Perfectly grounded on the tile floor seam
             } else if (this.isPlayer) {
                 rootMat.translate(-405, -280);
             } else if (this.isGF) {
