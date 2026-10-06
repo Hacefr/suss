@@ -132,7 +132,6 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Anchor Matrix: Locks all singing notes to Idle's origin so they NEVER jump
         this.idleRootMatrix = new PIXI.Matrix();
         for (const [sym, mat] of Object.entries(this.rootMatrices)) {
             if (sym.toLowerCase().includes('idle')) {
@@ -141,8 +140,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Timeline mode for master-timeline characters
-        this.isTimelineDriven = this.charName.includes('detective') || this.charName.includes('horse') || this.charName.includes('noob49');
+        this.isTimelineDriven = this.charName.includes('detective') || this.charName.includes('horse') || (this.charName.includes('noob49') && !this.charName.includes('dead'));
 
         this.currentAnim = this.isGF ? 'danceright' : 'idle';
         this.frame = 0;
@@ -150,7 +148,6 @@ class DynamicAtlasCharacter {
         this.holdTimer = 0;
         this.fps = 24;
 
-        // FNF Player Flip Rule: isPlayer inverts flipX so BF faces negative X (left towards opponent)
         const charScale = this.charConfig.scale || 1.0;
         const configFlip = !!this.charConfig.flipX;
         this.isFlipped = this.isPlayer ? !configFlip : configFlip;
@@ -169,7 +166,6 @@ class DynamicAtlasCharacter {
             if (clean.includes('right')) clean = 'rbruh';
         }
 
-        // Timeline Driven (Detective, Horsemate, Noob49)
         if (this.isTimelineDriven) {
             let targetTimelineKey = Object.keys(this.timelineAnims).find(k => {
                 const kc = k.replace(/[^a-z0-9]/g, '');
@@ -193,7 +189,6 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Symbol Driven (Boyfriend, Pico, GF, Maroon)
         let targetKey = Object.keys(this.animMap).find(k => {
             const kc = k.replace(/[^a-z0-9]/g, '');
             const cc = clean.replace(/[^a-z0-9]/g, '');
@@ -217,7 +212,6 @@ class DynamicAtlasCharacter {
         this.displayContainer.removeChildren();
         const self = this;
 
-        // Correct limb assembly: Parent Matrix -> Local Matrix (prevents scrambled parts)
         function renderSymbolInstance(symName, frameNum, parentMat, target) {
             const sym = self.symbols[symName];
             if (!sym || !sym.TL || !sym.TL.L) return;
@@ -257,7 +251,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Timeline Mode (Detective, Horsemate, Noob49) with Vertical Ground Lifts
+        // Timeline Mode (Green Line Ground Alignment)
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -278,13 +272,13 @@ class DynamicAtlasCharacter {
                 for (const el of activeFR.E) {
                     const baseMat = new PIXI.Matrix();
 
-                    // Flash canvas vertical ground lifts:
-                    if (this.charName.includes('noob49')) {
-                        baseMat.translate(-120, -320); // Lifts Noob49 to chair level
+                    // Green Line ground alignments
+                    if (this.charName === 'noob49') {
+                        baseMat.translate(-120, -560); // Lifts Noob49 up to desk height
                     } else if (this.charName.includes('detective')) {
-                        baseMat.translate(0, -220);    // Lifts Detective to floor tiles
+                        baseMat.translate(0, -380);    // Lifts Detective up to tile floor level
                     } else if (this.charName.includes('horse')) {
-                        baseMat.translate(0, -260);    // Lifts Horsemate to dirt ledge
+                        baseMat.translate(0, -480);    // Lifts Horsemate directly onto the dirt ledge
                     }
 
                     baseMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
@@ -307,13 +301,14 @@ class DynamicAtlasCharacter {
             return;
         }
 
-        // Symbol Mode: Locked to Idle Anchor (Zero Jumping on Notes)
+        // Symbol Mode
         if (this.mode === 'symbol' && this.activeSymbolName) {
             const rootMat = (this.rootMatrices[this.activeSymbolName] || this.idleRootMatrix).clone();
             
-            // Flash stage ground baseline
             if (this.charName.includes('pico')) {
                 rootMat.translate(116, -180);
+            } else if (this.charName.includes('purple')) {
+                rootMat.translate(-200, -460); // Lifts Purple up to green line
             } else if (this.isPlayer) {
                 rootMat.translate(-405, -280);
             } else if (this.isGF) {
@@ -385,12 +380,22 @@ async function loadCharacter(charName, isPlayer, isGF = false) {
     let spritemapJsonEntry = null;
     let spritemapPngEntry = null;
 
+    // Disambiguate noob49 so it never loads noob49stabbed or noob49dark
     for (const [path, entry] of Object.entries(VirtualFS.assets)) {
         const pNorm = path.replace(/\\/g, '/').toLowerCase();
-        const folderPart = pNorm.split('/').slice(0, -1).join('/');
-        const folderNorm = folderPart.replace(/[^a-z0-9]/g, '');
+        const parts = pNorm.split('/');
+        const folderName = parts[parts.length - 2] || '';
 
-        if (folderNorm.includes(cleanId) || folderPart.endsWith(`/${clean}`) || folderPart.endsWith(`/${cleanId}`)) {
+        let matches = false;
+        if (clean === 'noob49') {
+            matches = (folderName === 'noob49'); // Exact folder match prevents stabbed skin
+        } else if (clean === 'deadnoob49') {
+            matches = (folderName === 'deadnoob49');
+        } else {
+            matches = (folderName === clean || folderName.replace(/[^a-z0-9]/g, '') === cleanId);
+        }
+
+        if (matches) {
             if (pNorm.endsWith('animation.json')) animJsonEntry = entry;
             if (pNorm.endsWith('spritemap1.json')) spritemapJsonEntry = entry;
             if (pNorm.endsWith('spritemap1.png')) spritemapPngEntry = entry;
