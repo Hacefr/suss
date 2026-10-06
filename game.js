@@ -207,11 +207,7 @@ class PlayStateScene {
 
         if (this.dad) this.dad.container.position.set(dadPos[0], dadPos[1]);
         if (this.bf) this.bf.container.position.set(bfPos[0], bfPos[1]);
-        
-        if (this.gf) {
-            this.gf.container.position.set(gfPos[0], gfPos[1]);
-            this.gf.container.visible = !!(c && c.gf);
-        }
+        if (this.gf) this.gf.container.position.set(gfPos[0], gfPos[1]);
 
         if (this.gf && this.gf.container.visible) this.worldContainer.addChild(this.gf.container);
         if (this.dad) this.worldContainer.addChild(this.dad.container);
