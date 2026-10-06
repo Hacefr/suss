@@ -49,7 +49,7 @@ class PlayStateScene {
         this.camZoom = this.stageDefaultZoom;
         this.baseZoom = this.camZoom;
 
-        // Stage camera initialization (raised up ~50px to eliminate the bottom off-color border)
+        // Camera initialized ~70px higher to cut off the area under the purple lines
         this.initStageCameras(songItem.id.toLowerCase());
         this.setupStage(stageData, stageProps, stageJson);
         this.setupCharacters(stageJson);
@@ -63,33 +63,33 @@ class PlayStateScene {
 
     initStageCameras(songId) {
         if (songId.includes('49') || songId.includes('suspect')) {
-            this.dadCam = [500, 550];
-            this.bfCam = [850, 550];
+            this.dadCam = [500, 480];
+            this.bfCam = [850, 480];
             this.camTargetX = 675;
-            this.camTargetY = 550;
+            this.camTargetY = 480;
         } else if (songId.includes('trot')) {
-            this.dadCam = [540, 470];
-            this.bfCam = [900, 470];
+            this.dadCam = [540, 390];
+            this.bfCam = [900, 390];
             this.camTargetX = 720;
-            this.camTargetY = 470;
+            this.camTargetY = 390;
         } else if (songId.includes('lied')) {
-            this.dadCam = [640, 530];
-            this.bfCam = [810, 530];
+            this.dadCam = [640, 460];
+            this.bfCam = [810, 460];
             this.camTargetX = 725;
-            this.camTargetY = 530;
+            this.camTargetY = 460;
         } else if (songId.includes('threat')) {
-            this.dadCam = [800, 650];
-            this.bfCam = [1100, 650];
+            this.dadCam = [800, 600];
+            this.bfCam = [1100, 600];
             this.camTargetX = 950;
-            this.camTargetY = 650;
+            this.camTargetY = 600;
             this.stageDefaultZoom = 0.5;
             this.baseZoom = 0.5;
             this.camZoom = 0.5;
         } else {
-            this.dadCam = [600, 550];
-            this.bfCam = [850, 550];
+            this.dadCam = [600, 480];
+            this.bfCam = [850, 480];
             this.camTargetX = 725;
-            this.camTargetY = 550;
+            this.camTargetY = 480;
         }
 
         this.camFocusX = this.camTargetX;
@@ -143,7 +143,6 @@ class PlayStateScene {
                     aSpr.zIndex = p.zIndex || 0;
                     aSpr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
                     
-                    // Fixed: 'player' dead body in Suspect stays frozen on frame 0 until Pico shoots
                     const isPlayerShootProp = (cleanName === 'player');
                     aSpr.loop = !isPlayerShootProp;
                     aSpr.animationSpeed = 24 / 60;
@@ -160,9 +159,7 @@ class PlayStateScene {
                 } else if (tex) {
                     const spr = new PIXI.Sprite(tex);
                     spr.position.set(p.position[0], p.position[1]);
-                    
-                    // True 1:1 scale (no rogue 1.3x stretch)
-                    spr.scale.set(p.scale || 1);
+                    spr.scale.set(p.scale || 1); // True 1:1 scale
 
                     spr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
                     if (p.blend === 'subtract') spr.blendMode = PIXI.BLEND_MODES.SUBTRACT;
@@ -392,11 +389,11 @@ class PlayStateScene {
                     this.camTargetY = this.bfCam[1];
                 } else if (val.char === -1 && val.x !== undefined && val.y !== undefined) {
                     this.camTargetX = val.x;
-                    this.camTargetY = (val.y < 600) ? val.y + 40 : val.y;
+                    this.camTargetY = (val.y < 600) ? val.y : val.y;
                 }
                 break;
 
-            // Fixed: Camera zoom applies proportional to stage zoom (prevents 1.65x extreme close-ups)
+            // Proportional zoom from ClassicCameraZoom.hxc
             case 'ClassicCameraZoom':
             case 'ZoomCamera':
                 if (val.zoom !== undefined) {
@@ -617,7 +614,7 @@ function onStepHit(step) {
             if (playState.props['graypet']) playState.props['graypet'].alpha = 0.001;
             if (playState.props['tawny']) playState.props['tawny'].alpha = 0.001;
             if (playState.props['deadtawny']) playState.props['deadtawny'].alpha = 1;
-            playState.dadCam = [270, 550];
+            playState.dadCam = [270, 480];
         }
     }
 
@@ -637,10 +634,10 @@ function onStepHit(step) {
         }
 
         if (step === 448 || step === 464 || step === 480) {
-            playState.camTargetX = 500; playState.camTargetY = 550;
+            playState.camTargetX = 500; playState.camTargetY = 480;
         }
         if (step === 460 || step === 476 || step === 492) {
-            playState.camTargetX = 850; playState.camTargetY = 550;
+            playState.camTargetX = 850; playState.camTargetY = 480;
         }
 
         if (step === 805) {
@@ -711,14 +708,14 @@ function onStepHit(step) {
         if (step === 240) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = true;
             if (playState.dad) playState.dad.playAnim('wow', true);
-            playState.dadCam = [750, 650];
+            playState.dadCam = [750, 600];
         }
         if (step === 680) {
             playVideoCutscene('tthreat');
         }
         if (step === 690) {
             if (playState.extraChars.grey) playState.extraChars.grey.container.visible = true;
-            playState.dadCam = [450, 650];
+            playState.dadCam = [450, 600];
         }
         if (step === 1300) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.playAnim('shift', true);
@@ -729,7 +726,7 @@ function onStepHit(step) {
         if (step === 1320) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = false;
             if (playState.extraChars.maroonParasite) playState.extraChars.maroonParasite.container.visible = true;
-            playState.dadCam = [700, 650];
+            playState.dadCam = [700, 600];
         }
         if (step === 1848) {
             if (playState.dad) playState.dad.playAnim('bruh', true);
@@ -890,7 +887,6 @@ async function launchSong(item) {
             Conductor.activeSources.push(source);
         }
 
-        // Resolves exact character: always loads clean noob49 for 49
         let opponentName = item.player2;
         if (cleanId === '49' || cleanId.includes('49')) opponentName = 'noob49';
 
