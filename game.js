@@ -48,6 +48,7 @@ class PlayStateScene {
         this.camZoom = (stageJson && stageJson.cameraZoom) ? stageJson.cameraZoom : 0.7;
         this.baseZoom = this.camZoom;
 
+        // Ground-aligned camera initialization
         this.initStageCameras(songItem.id.toLowerCase());
         this.setupStage(stageData, stageProps, stageJson);
         this.setupCharacters(stageJson);
@@ -60,33 +61,34 @@ class PlayStateScene {
     }
 
     initStageCameras(songId) {
+        // True character baseline centers (avoids dragging floor into the void)
         if (songId.includes('49') || songId.includes('suspect')) {
-            this.dadCam = [500, 450];
-            this.bfCam = [850, 450];
+            this.dadCam = [500, 720];
+            this.bfCam = [850, 720];
             this.camTargetX = 675;
-            this.camTargetY = 450;
+            this.camTargetY = 720;
         } else if (songId.includes('trot')) {
-            this.dadCam = [540, 380];
-            this.bfCam = [900, 380];
+            this.dadCam = [540, 680];
+            this.bfCam = [900, 680];
             this.camTargetX = 720;
-            this.camTargetY = 380;
+            this.camTargetY = 680;
         } else if (songId.includes('lied')) {
-            this.dadCam = [640, 450];
-            this.bfCam = [810, 450];
+            this.dadCam = [640, 720];
+            this.bfCam = [810, 720];
             this.camTargetX = 725;
-            this.camTargetY = 450;
+            this.camTargetY = 720;
         } else if (songId.includes('threat')) {
-            this.dadCam = [950, 550];
-            this.bfCam = [950, 550];
-            this.camTargetX = 1100;
-            this.camTargetY = 550;
+            this.dadCam = [800, 800];
+            this.bfCam = [1100, 800];
+            this.camTargetX = 950;
+            this.camTargetY = 800;
             this.baseZoom = 0.5;
             this.camZoom = 0.5;
         } else {
-            this.dadCam = [600, 450];
-            this.bfCam = [850, 450];
+            this.dadCam = [600, 720];
+            this.bfCam = [850, 720];
             this.camTargetX = 725;
-            this.camTargetY = 450;
+            this.camTargetY = 720;
         }
 
         this.camFocusX = this.camTargetX;
@@ -383,7 +385,8 @@ class PlayStateScene {
                     this.camTargetY = this.bfCam[1];
                 } else if (val.char === -1 && val.x !== undefined && val.y !== undefined) {
                     this.camTargetX = val.x;
-                    this.camTargetY = val.y;
+                    // Automatically add the vertical center offset if raw HaxeFlixel top-left scroll was passed
+                    this.camTargetY = (val.y < 600) ? val.y + 260 : val.y;
                 }
                 break;
 
@@ -604,7 +607,7 @@ function onStepHit(step) {
             if (playState.props['graypet']) playState.props['graypet'].alpha = 0.001;
             if (playState.props['tawny']) playState.props['tawny'].alpha = 0.001;
             if (playState.props['deadtawny']) playState.props['deadtawny'].alpha = 1;
-            playState.dadCam = [270, 450];
+            playState.dadCam = [270, 720];
         }
     }
 
@@ -623,11 +626,12 @@ function onStepHit(step) {
             playState.hudContainer.visible = true;
         }
 
+        // Rapid camera cuts (centered at true floor level Y=720)
         if (step === 448 || step === 464 || step === 480) {
-            playState.camTargetX = 500; playState.camTargetY = 450;
+            playState.camTargetX = 500; playState.camTargetY = 720;
         }
         if (step === 460 || step === 476 || step === 492) {
-            playState.camTargetX = 850; playState.camTargetY = 450;
+            playState.camTargetX = 850; playState.camTargetY = 720;
         }
 
         if (step === 805) {
@@ -697,14 +701,14 @@ function onStepHit(step) {
         if (step === 240) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = true;
             if (playState.dad) playState.dad.playAnim('wow', true);
-            playState.dadCam = [850, 550];
+            playState.dadCam = [750, 800];
         }
         if (step === 680) {
             playVideoCutscene('tthreat');
         }
         if (step === 690) {
             if (playState.extraChars.grey) playState.extraChars.grey.container.visible = true;
-            playState.dadCam = [300, 660];
+            playState.dadCam = [450, 800];
         }
         if (step === 1300) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.playAnim('shift', true);
@@ -715,7 +719,7 @@ function onStepHit(step) {
         if (step === 1320) {
             if (playState.extraChars.maroon) playState.extraChars.maroon.container.visible = false;
             if (playState.extraChars.maroonParasite) playState.extraChars.maroonParasite.container.visible = true;
-            playState.dadCam = [700, 550];
+            playState.dadCam = [700, 800];
         }
         if (step === 1848) {
             if (playState.dad) playState.dad.playAnim('bruh', true);
@@ -845,6 +849,7 @@ async function launchSong(item) {
     const songId = item.id.toLowerCase();
     const cleanId = songId.replace(/[^a-z0-9]/g, '');
 
+    // Play Song Intro Cutscene Video if it exists
     if (songId.includes('49')) await playVideoCutscene('49');
     else if (songId.includes('suspect')) await playVideoCutscene('suspect');
     else if (songId.includes('lied')) await playVideoCutscene('dontlied');
