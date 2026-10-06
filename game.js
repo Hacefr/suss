@@ -48,7 +48,7 @@ class PlayStateScene {
         this.camZoom = (stageJson && stageJson.cameraZoom) ? stageJson.cameraZoom : 0.7;
         this.baseZoom = this.camZoom;
 
-        // Ground-aligned camera initialization
+        // Initialize stage cameras at true floor baseline
         this.initStageCameras(songItem.id.toLowerCase());
         this.setupStage(stageData, stageProps, stageJson);
         this.setupCharacters(stageJson);
@@ -61,7 +61,7 @@ class PlayStateScene {
     }
 
     initStageCameras(songId) {
-        // True character baseline centers (avoids dragging floor into the void)
+        // True floor baseline coordinates (stops camera from zooming into the ceiling)
         if (songId.includes('49') || songId.includes('suspect')) {
             this.dadCam = [500, 720];
             this.bfCam = [850, 720];
@@ -153,9 +153,8 @@ class PlayStateScene {
                     const spr = new PIXI.Sprite(tex);
                     spr.position.set(p.position[0], p.position[1]);
                     
-                    const isBackdrop = (cleanName === 'bg' || cleanName === 'sky' || cleanName === 'wall');
-                    const propScale = p.scale || 1;
-                    spr.scale.set(isBackdrop ? propScale * 1.3 : propScale);
+                    // True 1:1 scale (Rogue 1.3x stretch removed to connect floor with table legs)
+                    spr.scale.set(p.scale || 1);
 
                     spr.alpha = (p.alpha !== undefined) ? p.alpha : 1;
                     if (p.blend === 'subtract') spr.blendMode = PIXI.BLEND_MODES.SUBTRACT;
@@ -385,7 +384,7 @@ class PlayStateScene {
                     this.camTargetY = this.bfCam[1];
                 } else if (val.char === -1 && val.x !== undefined && val.y !== undefined) {
                     this.camTargetX = val.x;
-                    // Automatically add the vertical center offset if raw HaxeFlixel top-left scroll was passed
+                    // Add center offset if HaxeFlixel top-left scroll coordinate was sent
                     this.camTargetY = (val.y < 600) ? val.y + 260 : val.y;
                 }
                 break;
@@ -626,7 +625,6 @@ function onStepHit(step) {
             playState.hudContainer.visible = true;
         }
 
-        // Rapid camera cuts (centered at true floor level Y=720)
         if (step === 448 || step === 464 || step === 480) {
             playState.camTargetX = 500; playState.camTargetY = 720;
         }
