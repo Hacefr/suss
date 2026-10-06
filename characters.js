@@ -84,7 +84,6 @@ class DynamicAtlasCharacter {
         this.animMap = {};
         this.animOffsets = {}; 
 
-        // 1. Build animation map from char JSON
         if (this.charConfig.animations) {
             this.charConfig.animations.forEach(a => {
                 const animKey = a.name.toLowerCase();
@@ -102,7 +101,6 @@ class DynamicAtlasCharacter {
             });
         }
 
-        // 2. Fallback symbols for directions
         for (const symName of Object.keys(this.symbols)) {
             const lower = symName.toLowerCase();
             const assign = (key) => {
@@ -134,7 +132,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // 3. Anchor Matrix Detection (Locks Idle position so notes NEVER jump)
+        // Anchor Matrix: Locks all singing notes to Idle's origin so they NEVER jump
         this.idleRootMatrix = new PIXI.Matrix();
         for (const [sym, mat] of Object.entries(this.rootMatrices)) {
             if (sym.toLowerCase().includes('idle')) {
@@ -143,7 +141,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Style selector: Detective, Horsemate, and Noob49 use Master Timeline; BF, Pico, GF use Symbol
+        // Mode Detection
         this.isTimelineDriven = this.charName.includes('detective') || this.charName.includes('horse') || this.charName.includes('noob49');
 
         this.currentAnim = this.isGF ? 'danceright' : 'idle';
@@ -168,7 +166,7 @@ class DynamicAtlasCharacter {
             if (clean.includes('right')) clean = 'rbruh';
         }
 
-        // A. Timeline Style (Detective, Horsemate, Noob49)
+        // Timeline Driven (Detective, Horsemate, Noob49)
         if (this.isTimelineDriven) {
             let targetTimelineKey = Object.keys(this.timelineAnims).find(k => {
                 const kc = k.replace(/[^a-z0-9]/g, '');
@@ -192,7 +190,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // B. Symbol Style (BF, Pico, GF, Maroon)
+        // Symbol Driven (Boyfriend, Pico, GF, Maroon)
         let targetKey = Object.keys(this.animMap).find(k => {
             const kc = k.replace(/[^a-z0-9]/g, '');
             const cc = clean.replace(/[^a-z0-9]/g, '');
@@ -216,7 +214,7 @@ class DynamicAtlasCharacter {
         this.displayContainer.removeChildren();
         const self = this;
 
-        // Correct limb assembly: Parent Matrix -> Local Matrix
+        // Limbs assemble inside Parent: parentMat.clone().append(localMat)
         function renderSymbolInstance(symName, frameNum, parentMat, target) {
             const sym = self.symbols[symName];
             if (!sym || !sym.TL || !sym.TL.L) return;
@@ -256,7 +254,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Timeline Mode
+        // Timeline Mode (Detective, Horsemate, Noob49)
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -296,11 +294,21 @@ class DynamicAtlasCharacter {
             return;
         }
 
-        // Symbol Mode: Locked to Idle Anchor (Zero Jumping on Notes)
+        // Symbol Mode: Locked to Idle Anchor (Eliminates Jumping)
         if (this.mode === 'symbol' && this.activeSymbolName) {
             const rootMat = (this.rootMatrices[this.activeSymbolName] || this.idleRootMatrix).clone();
             
-            // Apply official offset deltas
+            // Apply Flash stage ground baseline
+            if (this.charName.includes('pico')) {
+                rootMat.translate(116, -180);
+            } else if (this.isPlayer) {
+                rootMat.translate(-405, -280);
+            } else if (this.isGF) {
+                rootMat.translate(-350, -320);
+            } else {
+                rootMat.translate(-200, -320);
+            }
+
             const offsets = this.animOffsets[this.currentAnim] || [0, 0];
             rootMat.translate(-offsets[0] + (this.globalOffset[0] || 0), -offsets[1] + (this.globalOffset[1] || 0));
 
@@ -323,7 +331,7 @@ class DynamicAtlasCharacter {
 
             if (this.mode === 'timeline' && this.activeAnimData) {
                 if (this.frame >= this.activeAnimData.duration) {
-                    this.frame = (this.currentAnim.includes('idle')) ? 0 : this.activeAnimData.duration - 1;
+                    this.frame = (this.currentAnim.includes('idle') || this.currentAnim.includes('dance')) ? 0 : this.activeAnimData.duration - 1;
                 }
             } else if (this.mode === 'symbol' && this.activeSymbolName) {
                 const sym = this.symbols[this.activeSymbolName];
