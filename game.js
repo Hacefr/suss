@@ -45,7 +45,6 @@ class PlayStateScene {
         this.hesDying = false;
         this.isDark = false;
 
-        // Stage Default Zoom from Stage JSON
         this.camZoom = (stageJson && stageJson.cameraZoom) ? stageJson.cameraZoom : 0.7;
         this.baseZoom = this.camZoom;
 
@@ -134,7 +133,6 @@ class PlayStateScene {
                     }
                 }
 
-                // Crash proof: Only instantiate AnimatedSprite when verified textures exist
                 if (Array.isArray(animTextures) && animTextures.length > 0) {
                     const aSpr = new PIXI.AnimatedSprite(animTextures);
                     aSpr.position.set(p.position[0], p.position[1]);
@@ -171,7 +169,6 @@ class PlayStateScene {
                 }
             });
 
-            // Security 2 Mist Layers
             if (stageData['mistback'] && stageData['mistmid']) {
                 const mb = new PIXI.TilingSprite(stageData['mistback'], 4000, 720);
                 mb.position.set(-1000, -270);
@@ -852,7 +849,6 @@ async function launchSong(item) {
     const songId = item.id.toLowerCase();
     const cleanId = songId.replace(/[^a-z0-9]/g, '');
 
-    // Play Song Intro Cutscene Video if it exists
     if (songId.includes('49')) await playVideoCutscene('49');
     else if (songId.includes('suspect')) await playVideoCutscene('suspect');
     else if (songId.includes('lied')) await playVideoCutscene('dontlied');
@@ -886,7 +882,6 @@ async function launchSong(item) {
         const dadChar = await loadCharacter(item.player2, false, false);
         const bfChar = await loadCharacter(item.player1, true, false);
         
-        // Exact GF selection (Dead Noob for Suspect, Sheriff for Trot Away, GF Weird for others)
         let gfName = 'gfweird';
         if (songId.includes('suspect')) gfName = 'deadnoob49';
         else if (songId.includes('trot')) gfName = 'gfweird-sheriff';
