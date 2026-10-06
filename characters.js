@@ -141,7 +141,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Mode Detection
+        // Timeline mode for master-timeline characters
         this.isTimelineDriven = this.charName.includes('detective') || this.charName.includes('horse') || this.charName.includes('noob49');
 
         this.currentAnim = this.isGF ? 'danceright' : 'idle';
@@ -150,8 +150,11 @@ class DynamicAtlasCharacter {
         this.holdTimer = 0;
         this.fps = 24;
 
+        // FNF Player Flip Rule: isPlayer inverts flipX so BF faces negative X (left towards opponent)
         const charScale = this.charConfig.scale || 1.0;
-        this.container.scale.set(this.charConfig.flipX ? -charScale : charScale, charScale);
+        const configFlip = !!this.charConfig.flipX;
+        this.isFlipped = this.isPlayer ? !configFlip : configFlip;
+        this.container.scale.set(this.isFlipped ? -charScale : charScale, charScale);
 
         this.playAnim(this.currentAnim, true);
     }
@@ -214,7 +217,7 @@ class DynamicAtlasCharacter {
         this.displayContainer.removeChildren();
         const self = this;
 
-        // Limbs assemble inside Parent: parentMat.clone().append(localMat)
+        // Correct limb assembly: Parent Matrix -> Local Matrix (prevents scrambled parts)
         function renderSymbolInstance(symName, frameNum, parentMat, target) {
             const sym = self.symbols[symName];
             if (!sym || !sym.TL || !sym.TL.L) return;
@@ -254,7 +257,7 @@ class DynamicAtlasCharacter {
             }
         }
 
-        // Timeline Mode (Detective, Horsemate, Noob49)
+        // Timeline Mode (Detective, Horsemate, Noob49) with Vertical Ground Lifts
         if (this.mode === 'timeline' && this.activeAnimData) {
             const masterFrame = this.activeAnimData.startFrame + this.frame;
 
@@ -274,6 +277,16 @@ class DynamicAtlasCharacter {
 
                 for (const el of activeFR.E) {
                     const baseMat = new PIXI.Matrix();
+
+                    // Flash canvas vertical ground lifts:
+                    if (this.charName.includes('noob49')) {
+                        baseMat.translate(-120, -320); // Lifts Noob49 to chair level
+                    } else if (this.charName.includes('detective')) {
+                        baseMat.translate(0, -220);    // Lifts Detective to floor tiles
+                    } else if (this.charName.includes('horse')) {
+                        baseMat.translate(0, -260);    // Lifts Horsemate to dirt ledge
+                    }
+
                     baseMat.translate(this.globalOffset[0] || 0, this.globalOffset[1] || 0);
 
                     if (el.ASI) {
@@ -294,11 +307,11 @@ class DynamicAtlasCharacter {
             return;
         }
 
-        // Symbol Mode: Locked to Idle Anchor (Eliminates Jumping)
+        // Symbol Mode: Locked to Idle Anchor (Zero Jumping on Notes)
         if (this.mode === 'symbol' && this.activeSymbolName) {
             const rootMat = (this.rootMatrices[this.activeSymbolName] || this.idleRootMatrix).clone();
             
-            // Apply Flash stage ground baseline
+            // Flash stage ground baseline
             if (this.charName.includes('pico')) {
                 rootMat.translate(116, -180);
             } else if (this.isPlayer) {
